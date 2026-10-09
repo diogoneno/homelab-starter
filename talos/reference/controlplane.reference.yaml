@@ -1,0 +1,115 @@
+# REFERENCE ONLY - do not apply this file.
+#
+# Shape of a control-plane machine config as produced by `talosctl gen config`
+# (or by the Terraform talos provider), with EVERY secret and address replaced by a
+# placeholder. It is here so you can see where things live and what the patches in
+# talos/patches/ change. Generate your real config with the commands in talos/README.md;
+# the real file contains private keys and tokens and must never be committed.
+#
+# Image versions are examples for Talos v1.7.6 (Kubernetes v1.30.3).
+version: v1alpha1
+debug: false
+persist: true
+machine:
+    type: controlplane
+    token: REPLACE_ME_TALOS_MACHINE_TOKEN           # secret: joins nodes to the cluster
+    ca:
+        crt: REPLACE_ME_TALOS_MACHINE_CA_CRT        # base64 PEM
+        key: REPLACE_ME_TALOS_MACHINE_CA_KEY        # secret: base64 PEM private key
+    certSANs: []
+    kubelet:
+        image: ghcr.io/siderolabs/kubelet:v1.30.3
+        defaultRuntimeSeccompProfileEnabled: true
+        disableManifestsDirectory: true
+        extraMounts:                                # from patches/common.yaml
+            - destination: /var/lib/longhorn
+              type: bind
+              source: /var/lib/longhorn
+              options: [bind, rshared, rw]
+    network:                                        # from patches/nodes/<node>.yaml
+        hostname: node-cp-1
+        interfaces:
+            - interface: ens18
+              dhcp: false
+              mtu: 1500
+              addresses: [192.0.2.11/24]
+              routes:
+                  - network: 0.0.0.0/0
+                    gateway: 192.0.2.1
+        nameservers: [192.0.2.53]
+    install:
+        disk: /dev/sda
+        image: factory.talos.dev/installer/REPLACE_ME_SCHEMATIC_ID:v1.7.6
+        wipe: false
+    features:
+        rbac: true
+        stableHostname: true
+        apidCheckExtKeyUsage: true
+        diskQuotaSupport: true
+        kubePrism:
+            enabled: true
+            port: 7445
+        hostDNS:
+            enabled: true
+cluster:
+    id: REPLACE_ME_TALOS_CLUSTER_ID                 # secret
+    secret: REPLACE_ME_TALOS_CLUSTER_SECRET         # secret
+    controlPlane:
+        endpoint: https://192.0.2.11:6443
+    clusterName: homelab
+    network:
+        dnsDomain: cluster.local
+        podSubnets: [10.244.0.0/16]
+        serviceSubnets: [10.96.0.0/12]
+    token: REPLACE_ME_TALOS_BOOTSTRAP_TOKEN         # secret: Kubernetes bootstrap token
+    secretboxEncryptionSecret: REPLACE_ME_TALOS_SECRETBOX_KEY   # secret: etcd encryption at rest
+    ca:
+        crt: REPLACE_ME_K8S_CA_CRT
+        key: REPLACE_ME_K8S_CA_KEY                  # secret
+    aggregatorCA:
+        crt: REPLACE_ME_K8S_AGG_CA_CRT
+        key: REPLACE_ME_K8S_AGG_CA_KEY       # secret
+    serviceAccount:
+        key: REPLACE_ME_K8S_SERVICEACCOUNT_KEY      # secret
+    apiServer:
+        image: registry.k8s.io/kube-apiserver:v1.30.3
+        certSANs:
+            - 192.0.2.11
+        disablePodSecurityPolicy: true
+        admissionControl:
+            - name: PodSecurity
+              configuration:
+                apiVersion: pod-security.admission.config.k8s.io/v1alpha1
+                kind: PodSecurityConfiguration
+                defaults:
+                    audit: restricted
+                    audit-version: latest
+                    enforce: baseline
+                    enforce-version: latest
+                    warn: restricted
+                    warn-version: latest
+                exemptions:
+                    namespaces: [kube-system]
+                    runtimeClasses: []
+                    usernames: []
+        auditPolicy:
+            apiVersion: audit.k8s.io/v1
+            kind: Policy
+            rules:
+                - level: Metadata
+    controllerManager:
+        image: registry.k8s.io/kube-controller-manager:v1.30.3
+    proxy:
+        image: registry.k8s.io/kube-proxy:v1.30.3
+    scheduler:
+        image: registry.k8s.io/kube-scheduler:v1.30.3
+    discovery:
+        enabled: true
+        registries:
+            kubernetes:
+                disabled: true
+            service: {}
+    etcd:
+        ca:
+            crt: REPLACE_ME_ETCD_CA_CRT
+            key: REPLACE_ME_ETCD_CA_KEY             # secret

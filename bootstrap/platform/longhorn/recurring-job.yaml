@@ -1,0 +1,20 @@
+# Daily 03:00 snapshot of every volume in the "default" group, keeping 7.
+# Snapshots live on the same disks as the volume: they protect against mistakes, not
+# against losing the node. Configure a Longhorn backup target (NFS/S3) for real backups.
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: daily-snapshot
+  namespace: longhorn-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  name: daily-snapshot
+  cron: "0 3 * * *"
+  task: snapshot
+  groups:
+    - default
+  retain: 7
+  concurrency: 2
+  labels: {}

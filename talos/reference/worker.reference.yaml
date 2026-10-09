@@ -1,0 +1,68 @@
+# REFERENCE ONLY - do not apply this file. See controlplane.reference.yaml for why it exists.
+# A worker config carries the machine token and the cluster CA certificate, but not
+# the CA private keys. It is still a secret: anyone holding it can join a node.
+version: v1alpha1
+debug: false
+persist: true
+machine:
+    type: worker
+    token: REPLACE_ME_TALOS_MACHINE_TOKEN           # secret
+    ca:
+        crt: REPLACE_ME_TALOS_MACHINE_CA_CRT
+        key: ""                                     # empty on workers
+    certSANs: []
+    kubelet:
+        image: ghcr.io/siderolabs/kubelet:v1.30.3
+        defaultRuntimeSeccompProfileEnabled: true
+        disableManifestsDirectory: true
+        extraMounts:                                # from patches/common.yaml
+            - destination: /var/lib/longhorn
+              type: bind
+              source: /var/lib/longhorn
+              options: [bind, rshared, rw]
+    nodeLabels:                                     # from patches/worker.yaml
+        node-role.kubernetes.io/worker: ""
+    network:                                        # from patches/nodes/<node>.yaml
+        hostname: node-worker-1
+        interfaces:
+            - interface: ens18
+              dhcp: false
+              mtu: 1500
+              addresses: [192.0.2.21/24]
+              routes:
+                  - network: 0.0.0.0/0
+                    gateway: 192.0.2.1
+        nameservers: [192.0.2.53]
+    install:
+        disk: /dev/sda
+        image: factory.talos.dev/installer/REPLACE_ME_SCHEMATIC_ID:v1.7.6
+        wipe: false
+    features:
+        rbac: true
+        stableHostname: true
+        apidCheckExtKeyUsage: true
+        diskQuotaSupport: true
+        kubePrism:
+            enabled: true
+            port: 7445
+        hostDNS:
+            enabled: true
+cluster:
+    id: REPLACE_ME_TALOS_CLUSTER_ID                 # secret
+    secret: REPLACE_ME_TALOS_CLUSTER_SECRET         # secret
+    controlPlane:
+        endpoint: https://192.0.2.11:6443
+    network:
+        dnsDomain: cluster.local
+        podSubnets: [10.244.0.0/16]
+        serviceSubnets: [10.96.0.0/12]
+    token: REPLACE_ME_TALOS_BOOTSTRAP_TOKEN         # secret
+    ca:
+        crt: REPLACE_ME_K8S_CA_CRT
+        key: ""
+    discovery:
+        enabled: true
+        registries:
+            kubernetes:
+                disabled: true
+            service: {}

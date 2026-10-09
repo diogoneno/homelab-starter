@@ -1,0 +1,10 @@
+# Talos Image Factory schematic. Longhorn needs iSCSI and the util-linux tools on the host.
+#   curl -sX POST --data-binary @talos/schematic.yaml https://factory.talos.dev/schematics
+# returns {"id":"<schematic-id>"}. Use it in:
+#   ISO:       https://factory.talos.dev/image/<schematic-id>/<talos-version>/metal-amd64.iso
+#   installer: factory.talos.dev/installer/<schematic-id>:<talos-version>
+customization:
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/iscsi-tools
+      - siderolabs/util-linux-tools

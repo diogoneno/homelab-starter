@@ -1,0 +1,97 @@
+# Gitea from the official Helm chart, with its own PostgreSQL.
+# No password appears here: both come from Secrets you create first (SECRETS.md).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gitea
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://dl.gitea.com/charts/
+    chart: gitea
+    targetRevision: 10.4.0
+    helm:
+      values: |
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        # RWO volume: RollingUpdate deadlocks (the new pod cannot mount the volume
+        # the old pod still holds). Recreate stops the old pod first.
+        strategy:
+          type: Recreate
+        gitea:
+          admin:
+            # Secret gitea-admin, keys: username, password
+            existingSecret: gitea-admin
+            email: admin@example.internal
+            passwordMode: initialOnlyNoReset
+          # The chart only knows the DB password when it is inline; feed it from
+          # the same Secret PostgreSQL uses so nothing is in git.
+          additionalConfigFromEnvs:
+            - name: GITEA__DATABASE__PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-postgresql
+                  key: password
+        image:
+          pullPolicy: IfNotPresent
+        ingress:
+          enabled: true
+          className: nginx
+          annotations:
+            cert-manager.io/cluster-issuer: selfsigned-issuer
+            nginx.ingress.kubernetes.io/proxy-body-size: "0"   # no limit on git push size
+          hosts:
+            - host: gitea.example.internal
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - secretName: gitea-tls
+              hosts:
+                - gitea.example.internal
+        persistence:
+          enabled: true
+          storageClass: longhorn
+          size: 20Gi   # repositories; size for your largest repo plus LFS
+        postgresql:
+          enabled: true
+          image:
+            # Unpinned on purpose: older Bitnami tags were withdrawn from Docker Hub.
+            tag: latest
+          global:
+            postgresql:
+              auth:
+                # Secret gitea-postgresql, keys: password, postgres-password
+                existingSecret: gitea-postgresql
+                secretKeys:
+                  userPasswordKey: password
+                  adminPasswordKey: postgres-password
+          primary:
+            persistence:
+              enabled: true
+              storageClass: longhorn
+              size: 5Gi
+        postgresql-ha:
+          enabled: false
+        redis-cluster:
+          enabled: false
+        redis:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: gitea
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,21 @@
+# Per-node network patch for node-cp-1 (manual talosctl path; Terraform generates the
+# equivalent from the `nodes` variable). Replace every 192.0.2.x with your own LAN values.
+#
+# Talos merges list entries by APPENDING. If the machine config you patch already has a
+# default route, do not add a second one here: you get a duplicate 0.0.0.0/0 route.
+# Configs straight from `talosctl gen config` have `machine.network: {}`, so the route
+# below is correct for them.
+machine:
+  network:
+    hostname: node-cp-1
+    interfaces:
+      - interface: ens18   # first virtio NIC on a Proxmox q35 VM
+        dhcp: false
+        mtu: 1500          # lower it (e.g. 1492) behind PPPoE
+        addresses:
+          - 192.0.2.11/24
+        routes:
+          - network: 0.0.0.0/0
+            gateway: 192.0.2.1
+    nameservers:
+      - 192.0.2.53

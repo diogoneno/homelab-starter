@@ -1,0 +1,17 @@
+# Applied to EVERY node (control plane and workers).
+# Contains no secrets and no addresses; per-node networking lives in patches/nodes/.
+machine:
+  kubelet:
+    # Longhorn stores replica data under /var/lib/longhorn and needs it bind-mounted
+    # into the kubelet with rshared propagation.
+    extraMounts:
+      - destination: /var/lib/longhorn
+        type: bind
+        source: /var/lib/longhorn
+        options:
+          - bind
+          - rshared
+          - rw
+  install:
+    disk: /dev/sda
+    wipe: false

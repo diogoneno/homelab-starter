@@ -1,0 +1,59 @@
+# kube-prometheus-stack: Prometheus, Alertmanager, Grafana, node-exporter, kube-state-metrics.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 62.3.1
+    helm:
+      values: |
+        prometheus:
+          prometheusSpec:
+            retention: 10d
+            resources:
+              requests:
+                memory: 256Mi
+              limits:
+                memory: 1000Mi
+            # Scrape machines outside the cluster here (see README.md in this directory).
+            additionalScrapeConfigs: []
+        grafana:
+          # Secret grafana-admin, keys: admin-user, admin-password.
+          # Without it the chart falls back to a well-known default password.
+          admin:
+            existingSecret: grafana-admin
+            userKey: admin-user
+            passwordKey: admin-password
+          resources:
+            requests:
+              memory: 50Mi
+            limits:
+              memory: 200Mi
+          ingress:
+            enabled: true
+            ingressClassName: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: selfsigned-issuer
+            hosts:
+              - grafana.example.internal
+            tls:
+              - secretName: grafana-tls
+                hosts:
+                  - grafana.example.internal
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # The Prometheus Operator CRDs exceed the client-side apply annotation limit.
+      - ServerSideApply=true

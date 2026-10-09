@@ -1,0 +1,13 @@
+# Self-signed issuer: every Ingress annotated with
+#   cert-manager.io/cluster-issuer: selfsigned-issuer
+# gets a certificate. Browsers will warn; fine on a LAN. For trusted certificates,
+# add an ACME ClusterIssuer with a DNS-01 solver for a domain you own.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  selfSigned: {}

@@ -1,0 +1,99 @@
+# Nextcloud from the official Helm chart, backed by its own PostgreSQL.
+# No password appears here: they come from Secrets you create first (SECRETS.md).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nextcloud
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://nextcloud.github.io/helm/
+    chart: nextcloud
+    targetRevision: 6.0.0
+    helm:
+      values: |
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        image:
+          pullPolicy: IfNotPresent
+        ingress:
+          enabled: true
+          className: nginx
+          annotations:
+            cert-manager.io/cluster-issuer: selfsigned-issuer
+            nginx.ingress.kubernetes.io/proxy-body-size: 512m
+          tls:
+            - secretName: nextcloud-tls
+              hosts:
+                - nextcloud.example.internal
+        nextcloud:
+          host: nextcloud.example.internal
+          # Secret nextcloud-admin, keys: nextcloud-username, nextcloud-password
+          existingSecret:
+            enabled: true
+            secretName: nextcloud-admin
+            usernameKey: nextcloud-username
+            passwordKey: nextcloud-password
+          configs:
+            # Stops update checks and app-store calls on an offline/LAN-only install.
+            offline.config.php: |-
+              <?php
+              $CONFIG = array (
+                'has_internet_connection' => false,
+                'updatechecker' => false,
+              );
+        # Use the bundled PostgreSQL instead of the chart's SQLite default.
+        internalDatabase:
+          enabled: false
+        externalDatabase:
+          enabled: true
+          type: postgresql
+          # Secret nextcloud-db, keys: db-username, db-password (+ postgres-password below)
+          existingSecret:
+            enabled: true
+            secretName: nextcloud-db
+            usernameKey: db-username
+            passwordKey: db-password
+        mariadb:
+          enabled: false
+        postgresql:
+          enabled: true
+          image:
+            # Unpinned on purpose: older Bitnami tags were withdrawn from Docker Hub.
+            tag: latest
+          global:
+            postgresql:
+              auth:
+                username: nextcloud
+                database: nextcloud
+                existingSecret: nextcloud-db
+                secretKeys:
+                  userPasswordKey: db-password
+                  adminPasswordKey: postgres-password
+          primary:
+            persistence:
+              enabled: true
+              storageClass: longhorn
+              size: 2Gi
+        persistence:
+          enabled: true
+          storageClass: longhorn
+          size: 10Gi   # user files; size for what you will store
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nextcloud
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

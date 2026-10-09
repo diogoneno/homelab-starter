@@ -1,0 +1,32 @@
+# --- credentials: never commit ---
+kubeconfig*
+*.kubeconfig
+talosconfig*
+secrets/
+secrets.yaml
+.env
+.env.*
+*.key
+*.pem
+*.crt
+*.p12
+
+# --- Terraform ---
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+*.auto.tfvars
+crash.log
+crash.*.log
+
+# --- generated Talos machine configs (contain the cluster PKI) ---
+_out/
+**/_out/
+
+# --- misc ---
+*.bak
+*.bak-*
+*.zip
+*.tar.gz
+.DS_Store

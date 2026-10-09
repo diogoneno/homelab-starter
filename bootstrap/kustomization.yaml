@@ -1,0 +1,8 @@
+# Applied once by hand after ArgoCD is installed:  kubectl apply -k bootstrap/
+# From then on ArgoCD owns everything else from git.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - platform-app.yaml
+  - root-app.yaml
+  - argocd-ingress.yaml

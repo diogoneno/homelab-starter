@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: trilium-data
+  namespace: trilium
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trilium
+  namespace: trilium
+spec:
+  replicas: 1
+  # RWO volume: a RollingUpdate would start the new pod while the old one still holds
+  # the volume, and the new pod would hang in ContainerCreating. Recreate avoids that.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: trilium
+  template:
+    metadata:
+      labels:
+        app: trilium
+    spec:
+      containers:
+        - name: trilium
+          # Unpinned upstream tag (as in the original homelab). Pin a version for
+          # reproducible upgrades. See README.md in this directory.
+          image: zadam/trilium:latest
+          env:
+            - name: TRILIUM_PORT
+              value: "8080"
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: trilium-data
+              mountPath: /home/node/trilium-data
+      volumes:
+        - name: trilium-data
+          persistentVolumeClaim:
+            claimName: trilium-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trilium
+  namespace: trilium
+spec:
+  selector:
+    app: trilium
+  ports:
+    - port: 80
+      targetPort: 8080

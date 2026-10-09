@@ -1,0 +1,10 @@
+# Synced by the "apps" Application (bootstrap/root-app.yaml).
+# Comment out any app you do not want.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - trilium
+  - vaultwarden
+  - gitea
+  - nextcloud
+  - monitoring

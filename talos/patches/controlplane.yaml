@@ -1,0 +1,11 @@
+# Applied to control-plane nodes only.
+cluster:
+  # Default Talos subnets; change only if they collide with your LAN.
+  network:
+    podSubnets:
+      - 10.244.0.0/16
+    serviceSubnets:
+      - 10.96.0.0/12
+  # Single-node or small clusters can let workloads run on the control plane.
+  # Leave false when you have dedicated workers.
+  allowSchedulingOnControlPlanes: false

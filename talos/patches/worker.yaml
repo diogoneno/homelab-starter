@@ -1,0 +1,4 @@
+# Applied to worker nodes only.
+machine:
+  nodeLabels:
+    node-role.kubernetes.io/worker: ""

@@ -1,0 +1,56 @@
+# Copy to terraform.tfvars (git-ignored) and fill in. Every value here is a placeholder.
+# See VALUES.md at the repo root for what each one means.
+
+proxmox_endpoint         = "https://pve.example.internal:8006/"
+proxmox_api_token_id     = "REPLACE_ME_PROXMOX_TOKEN_ID"     # e.g. terraform@pve!homelab
+proxmox_api_token_secret = "REPLACE_ME_PROXMOX_TOKEN_SECRET" # shown once when you create the token
+proxmox_insecure         = true
+
+iso_datastore  = "local"
+network_bridge = "vmbr0"
+
+talos_version    = "v1.7.6"
+# Image Factory installer with iscsi-tools + util-linux-tools (required by Longhorn).
+# Get <schematic-id> by POSTing talos/schematic.yaml to https://factory.talos.dev/schematics
+talos_installer_image = "factory.talos.dev/installer/REPLACE_ME_SCHEMATIC_ID:v1.7.6"
+cluster_name     = "homelab"
+cluster_endpoint = "https://192.0.2.11:6443" # = the control-plane node IP below
+
+network_gateway       = "192.0.2.1"
+network_prefix_length = 24
+nameservers           = ["192.0.2.53"]
+network_mtu           = 1500
+
+nodes = {
+  "node-cp-1" = {
+    role           = "controlplane"
+    proxmox_node   = "pve-node-1"
+    vm_id          = 100
+    ip_address     = "192.0.2.11"
+    cpu_cores      = 4
+    memory_mb      = 8192
+    disk_datastore = "local-lvm"
+    disk_size_gb   = 20
+  }
+  # Storage worker: the big disk backs Longhorn volumes.
+  "node-worker-1" = {
+    role           = "worker"
+    proxmox_node   = "pve-node-2"
+    vm_id          = 201
+    ip_address     = "192.0.2.21"
+    cpu_cores      = 8
+    memory_mb      = 8192
+    disk_datastore = "local-lvm"
+    disk_size_gb   = 200
+  }
+  "node-worker-2" = {
+    role           = "worker"
+    proxmox_node   = "pve-node-1"
+    vm_id          = 202
+    ip_address     = "192.0.2.22"
+    cpu_cores      = 8
+    memory_mb      = 8192
+    disk_datastore = "local-lvm"
+    disk_size_gb   = 20
+  }
+}
